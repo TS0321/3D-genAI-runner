@@ -1,0 +1,18 @@
+# 出力
+output/
+output_*/
+
+# テスト画像
+test.png
+*.jpg
+
+# Python
+__pycache__/
+*.pyc
+.python-version
+
+# OS
+.DS_Store
+
+# Claude Code
+.claude/
