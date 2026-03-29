@@ -81,6 +81,7 @@ def run_inference(
     foreground_ratio: float = 0.85,
     bake: bool = False,
     texture_resolution: int = 2048,
+    output_format: str = "obj",
 ):
     """TripoSR による 3D メッシュ生成を実行する"""
     os.makedirs(output_dir, exist_ok=True)
@@ -124,10 +125,12 @@ def run_inference(
     meshes = model.extract_mesh(scene_codes, has_vertex_color=not bake, resolution=mc_resolution)
     logger.info(f"メッシュ抽出完了 ({time.time() - t3:.1f}秒)")
 
-    output_path = os.path.join(output_dir, "mesh.obj")
+    ext = output_format.lower()
+    output_path = os.path.join(output_dir, f"mesh.{ext}")
 
     if bake:
         import xatlas
+        import trimesh
 
         # --- テクスチャベイク ---
         t4 = time.time()
@@ -135,34 +138,51 @@ def run_inference(
         bake_output = bake_texture(meshes[0], model, scene_codes[0], texture_resolution)
         logger.info(f"テクスチャベイク完了 ({time.time() - t4:.1f}秒)")
 
-        # OBJ + テクスチャ画像を保存
-        xatlas.export(
-            output_path,
-            meshes[0].vertices[bake_output["vmapping"]],
-            bake_output["indices"],
-            bake_output["uvs"],
-            meshes[0].vertex_normals[bake_output["vmapping"]],
-        )
-        texture_path = os.path.join(output_dir, "texture.png")
-        Image.fromarray(
+        texture_image = Image.fromarray(
             (bake_output["colors"] * 255.0).astype(np.uint8)
-        ).transpose(Image.FLIP_TOP_BOTTOM).save(texture_path)
-        logger.info(f"テクスチャを保存しました: {texture_path}")
+        ).transpose(Image.FLIP_TOP_BOTTOM)
 
-        # OBJ 内で mtl ファイルを参照するよう追記
-        mtl_path = os.path.join(output_dir, "mesh.mtl")
-        with open(mtl_path, "w") as f:
-            f.write("newmtl material0\n")
-            f.write("map_Kd texture.png\n")
-        # OBJ の先頭に mtllib を追加
-        with open(output_path, "r") as f:
-            obj_content = f.read()
-        with open(output_path, "w") as f:
-            f.write("mtllib mesh.mtl\n")
-            f.write(obj_content)
-        logger.info(f"マテリアルを保存しました: {mtl_path}")
+        if ext == "glb":
+            # GLB: テクスチャを埋め込んだ単一ファイルとして出力
+            material = trimesh.visual.material.PBRMaterial(
+                baseColorTexture=texture_image,
+            )
+            uv_visual = trimesh.visual.TextureVisuals(
+                uv=bake_output["uvs"],
+                material=material,
+            )
+            textured_mesh = trimesh.Trimesh(
+                vertices=meshes[0].vertices[bake_output["vmapping"]],
+                faces=bake_output["indices"],
+                vertex_normals=meshes[0].vertex_normals[bake_output["vmapping"]],
+                visual=uv_visual,
+            )
+            textured_mesh.export(output_path)
+        else:
+            # OBJ: 従来通り .obj + .mtl + texture.png として出力
+            xatlas.export(
+                output_path,
+                meshes[0].vertices[bake_output["vmapping"]],
+                bake_output["indices"],
+                bake_output["uvs"],
+                meshes[0].vertex_normals[bake_output["vmapping"]],
+            )
+            texture_path = os.path.join(output_dir, "texture.png")
+            texture_image.save(texture_path)
+            logger.info(f"テクスチャを保存しました: {texture_path}")
+
+            mtl_path = os.path.join(output_dir, "mesh.mtl")
+            with open(mtl_path, "w") as f:
+                f.write("newmtl material0\n")
+                f.write("map_Kd texture.png\n")
+            with open(output_path, "r") as f:
+                obj_content = f.read()
+            with open(output_path, "w") as f:
+                f.write("mtllib mesh.mtl\n")
+                f.write(obj_content)
+            logger.info(f"マテリアルを保存しました: {mtl_path}")
     else:
-        # --- 頂点カラー付き OBJ ---
+        # --- 頂点カラー付き ---
         meshes[0].export(output_path)
 
     logger.info(f"メッシュを保存しました: {output_path}")
@@ -224,6 +244,13 @@ def main():
         default=2048,
         help="テクスチャ解像度 (デフォルト: 2048, --bake-texture 時のみ有効)",
     )
+    parser.add_argument(
+        "--format",
+        type=str,
+        choices=["obj", "glb"],
+        default="obj",
+        help="出力フォーマット (デフォルト: obj)",
+    )
 
     args = parser.parse_args()
 
@@ -241,6 +268,7 @@ def main():
         foreground_ratio=args.foreground_ratio,
         bake=args.bake_texture,
         texture_resolution=args.texture_resolution,
+        output_format=args.format,
     )
 
     print(f"\n完了! 出力ファイル: {output_path}")

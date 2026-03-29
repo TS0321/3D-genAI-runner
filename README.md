@@ -61,6 +61,24 @@ python scripts/tripo/run_tripo.py image.png --bake-texture
 python scripts/tripo/run_tripo.py image.png --bake-texture --output-dir results/
 ```
 
+#### モデルの事前ダウンロード
+
+通常はモデルを初回実行時に HuggingFace Hub から自動ダウンロードしますが、ネットワーク制限のある環境で使用する場合は事前にダウンロードしておくことができます。
+
+```bash
+# インターネットにアクセスできる環境で事前ダウンロード
+pip install huggingface-hub
+huggingface-cli download stabilityai/TripoSR --local-dir ./TripoSR-weights
+```
+
+ダウンロードしたディレクトリ内に `config.yaml` と `model.ckpt` があることを確認してください。
+
+推論時に `--model` オプションでローカルパスを指定します:
+
+```bash
+python scripts/tripo/run_tripo.py image.png --model ./TripoSR-weights
+```
+
 #### オプション
 
 | オプション | 説明 | デフォルト |
@@ -70,16 +88,18 @@ python scripts/tripo/run_tripo.py image.png --bake-texture --output-dir results/
 | `--mc-resolution N` | メッシュの精細度 | 256 |
 | `--chunk-size N` | 評価チャンクサイズ（小さいほどVRAM節約） | 8192 |
 | `--no-remove-bg` | 背景除去をスキップ | 自動除去 |
+| `--format FORMAT` | 出力フォーマット (`obj` / `glb`) | `obj` |
 | `--output-dir DIR` | 出力先ディレクトリ | `output/` |
 
 ## 共通ツール
 
 ### Blender ビューア
 
-生成した .obj ファイルを Blender で表示します（Blender 5.x 対応）:
+生成した .obj / .glb ファイルを Blender で表示します（Blender 5.x 対応）:
 
 ```bash
 ./tools/open_in_blender.sh output/mesh.obj
+./tools/open_in_blender.sh output/mesh.glb
 ```
 
 ## ライセンス

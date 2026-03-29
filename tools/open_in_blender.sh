@@ -1,6 +1,7 @@
 #!/bin/bash
-# 指定した OBJ ファイルを Blender で開くスクリプト
-# 使い方: ./open_in_blender.sh output_textured/mesh.obj
+# 指定した 3D ファイル（OBJ / GLB）を Blender で開くスクリプト
+# 使い方: ./open_in_blender.sh output/mesh.obj
+#         ./open_in_blender.sh output/mesh.glb
 
 OBJ_PATH="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

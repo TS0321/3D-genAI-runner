@@ -11,14 +11,21 @@ import sys
 # -- 以降の引数を取得
 argv = sys.argv
 argv = argv[argv.index("--") + 1:]
-obj_path = argv[0]
+file_path = argv[0]
+ext = os.path.splitext(file_path)[1].lower()
 
 # デフォルトオブジェクト（Cube, Light, Camera）を削除
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete()
 
-# OBJ インポート
-bpy.ops.wm.obj_import(filepath=obj_path)
+# ファイル形式に応じてインポート
+if ext == ".glb" or ext == ".gltf":
+    bpy.ops.import_scene.gltf(filepath=file_path)
+elif ext == ".obj":
+    bpy.ops.wm.obj_import(filepath=file_path)
+else:
+    print(f"ERROR: 未対応のファイル形式です: {ext}")
+    sys.exit(1)
 
 imported = [o for o in bpy.data.objects if o.type == "MESH"]
 if not imported:
@@ -45,9 +52,9 @@ bpy.context.object.data.energy = 3.0
 bpy.ops.object.light_add(type="SUN", location=(-5, -3, 8))
 bpy.context.object.data.energy = 1.5
 
-# テクスチャファイルがあればマテリアルを設定
-texture_path = os.path.join(os.path.dirname(obj_path), "texture.png")
-if os.path.exists(texture_path) and not obj.data.materials:
+# テクスチャファイルがあればマテリアルを設定（GLB は埋め込み済みのためスキップ）
+texture_path = os.path.join(os.path.dirname(file_path), "texture.png")
+if ext == ".obj" and os.path.exists(texture_path) and not obj.data.materials:
     mat = bpy.data.materials.new(name="TripoSR_Material")
     nodes = mat.node_tree.nodes
     links = mat.node_tree.links

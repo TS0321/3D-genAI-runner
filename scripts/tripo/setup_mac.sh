@@ -110,21 +110,22 @@ pip install omegaconf==2.3.0
 pip install Pillow==10.1.0
 pip install einops==0.7.0
 pip install transformers==4.35.0
-pip install trimesh==4.0.5
+pip install trimesh>=4.6.0
 pip install rembg onnxruntime
 pip install huggingface-hub
 pip install "imageio[ffmpeg]"
 pip install xatlas
 pip install moderngl==5.10.0
 
+# PyMCubes（torchmcubes のフォールバック用に常にインストール）
+pip install PyMCubes
+
 # torchmcubes のインストール（ビルドに失敗しても続行）
 echo "  torchmcubes をインストール中..."
 if pip install git+https://github.com/tatsy/torchmcubes.git 2>/dev/null; then
     echo "  -> torchmcubes インストール成功"
 else
-    echo "  [WARNING] torchmcubes のビルドに失敗しました。"
-    echo "  marching cubes には PyMCubes を代替として使用します。"
-    pip install PyMCubes
+    echo "  [WARNING] torchmcubes のビルドに失敗しました。PyMCubes を使用します。"
 fi
 
 echo ""
